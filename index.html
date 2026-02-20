@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz de España</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+:root{
+  --bg-light:#f2f2f2;
+  --gradient-top:#d4f5e9;
+  --card:#ffffff;
+  --green:#16a085;
+  --green-dark:#13856e;
+  --green-soft:#1abc9c;
+  --green-soft-dark:#17a589;
+  --correct:#4CAF50;
+  --wrong:#E53935;
+  --text:#2c3e50;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Montserrat',sans-serif;}
+
+body{
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:20px;
+  position:relative;
+  background:var(--bg-light);
+}
+
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background:linear-gradient(to bottom,var(--gradient-top) 0%,var(--bg-light) 45%);
+  z-index:-1;
+}
+
+.container{
+  width:100%;
+  max-width:500px;
+  background:var(--card);
+  padding:30px;
+  border-radius:18px;
+  box-shadow:0 15px 35px rgba(0,0,0,0.08);
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  position:relative;
+  overflow:hidden;
+}
+
+.container::before{
+  content:"";
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:6px;
+  background:linear-gradient(to right,var(--green-soft),var(--green));
+}
+
+h1{
+  text-align:center;
+  font-size:1.9rem;
+  font-weight:700;
+  color:var(--text);
+  margin-bottom:15px;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  font-weight:600;
+  cursor:pointer;
+  transition:0.25s ease;
+}
+
+.center-button{background:var(--green);color:white;}
+.center-button:hover{background:var(--green-dark);}
+.tarea{background:var(--green-soft);color:white;margin-bottom:5px;}
+.tarea:hover{background:var(--green-soft-dark);}
+.button{margin:5px 0;}
+.proxima{background:var(--green);color:white;}
+.voltar{background:#999;color:white;}
+.correct{background:var(--correct)!important;color:white!important;}
+.wrong{background:var(--wrong)!important;color:white!important;}
+.disabled{pointer-events:none;opacity:.85;}
+
+.section-title{
+  margin:15px 0 5px;
+  font-weight:600;
+  border-bottom:2px solid #eee;
+  padding-bottom:5px;
+}
+
+#menuScreen{transition:opacity .4s ease;}
+
+#quizScreen{
+  display:none;
+  flex-direction:column;
+  opacity:0;
+  transition:opacity .4s ease;
+}
+
+#quizScreen.show{opacity:1;}
+
+.top-info{
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:15px;
+  font-size:13px;
+}
+
+.animate-in{
+  animation:slideIn .6s ease forwards;
+}
+
+@keyframes slideIn{
+  0%{opacity:0;transform:translateY(8px);}
+  60%{opacity:1;transform:translateY(-2px);}
+  80%{transform:translateY(1px);}
+  100%{opacity:1;transform:translateY(0);}
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<div id="menuScreen">
+  <h1>Quiz de España</h1>
+
+  <button class="center-button">🎲 Aleatorio (Todas las Tareas)</button>
+
+  <div class="section-title">Preguntas por Tarea</div>
+
+  <button class="tarea">TAREA 1 - Gobierno, legislación</button>
+  <button class="tarea">TAREA 2 - Derechos y deberes</button>
+  <button class="tarea">TAREA 3 - Geografía física y política</button>
+  <button class="tarea">TAREA 4 - Cultura e historia</button>
+  <button class="tarea">TAREA 5 - Sociedad española</button>
+</div>
+
+<div id="quizScreen">
+  <div class="top-info">
+    <div id="modoAtual"></div>
+    <div>✅ <span id="acertos">0</span> | ❌ <span id="erros">0</span></div>
+  </div>
+
+  <div id="quiz"></div>
+
+  <button class="button proxima">Próxima</button>
+  <button class="button voltar">Volver al Menú</button>
+</div>
+
+</div>
+
+<script>
+
+/* =====================================================
+   📚 ÁREA DE PERGUNTAS (EDITAR AQUI)
+   ===================================================== */
+
+const tareas = {
+  1:[
+    {id:1001, pergunta:"Pregunta 1001?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"A"},
+    {id:1002, pergunta:"Pregunta 1002?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"B"},
+    {id:1003, pergunta:"Pregunta 1003?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"C"},
+    {id:1004, pergunta:"Pregunta 1004?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"A"},
+    {id:1005, pergunta:"Pregunta 1005?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"B"}
+  ],
+  2:[
+    {id:2001, pergunta:"Pregunta 2001?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"A"},
+    {id:2002, pergunta:"Pregunta 2002?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"B"},
+    {id:2003, pergunta:"Pregunta 2003?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"C"},
+    {id:2004, pergunta:"Pregunta 2004?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"A"},
+    {id:2005, pergunta:"Pregunta 2005?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"B"}
+  ],
+  3:[
+    {id:3001, pergunta:"Pregunta 3001?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"A"},
+    {id:3002, pergunta:"Pregunta 3002?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"B"},
+    {id:3003, pergunta:"Pregunta 3003?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"C"},
+    {id:3004, pergunta:"Pregunta 3004?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"A"},
+    {id:3005, pergunta:"Pregunta 3005?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"B"}
+  ],
+  4:[
+    {id:4001, pergunta:"Pregunta 4001?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"A"},
+    {id:4002, pergunta:"Pregunta 4002?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"B"},
+    {id:4003, pergunta:"Pregunta 4003?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"C"},
+    {id:4004, pergunta:"Pregunta 4004?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"A"},
+    {id:4005, pergunta:"Pregunta 4005?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"B"}
+  ],
+  5:[
+    {id:5001, pergunta:"Pregunta 5001?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"A"},
+    {id:5002, pergunta:"Pregunta 5002?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"B"},
+    {id:5003, pergunta:"Pregunta 5003?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"C"},
+    {id:5004, pergunta:"Pregunta 5004?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"A"},
+    {id:5005, pergunta:"Pregunta 5005?", alternativas:{A:"Opción A",B:"Opción B",C:"Opción C"}, correta:"B"}
+  ]
+};
+
+/* =====================================================
+   ⚙️ LÓGICA DO QUIZ (SEM REPETIR PERGUNTAS)
+   ===================================================== */
+
+let tareaActual=[];
+let preguntaActual=null;
+let aciertos=0;
+let errores=0;
+let respondido=false;
+let perguntasUsadas = []; // IDs já usados
+
+window.onload=()=>{
+document.querySelectorAll("#menuScreen button").forEach((b,i)=>{
+setTimeout(()=>b.classList.add("animate-in"),i*80);
+});
+};
+
+document.querySelectorAll(".tarea").forEach((btn,i)=>{
+btn.onclick=()=>iniciar(i+1,btn.innerText);
+});
+document.querySelector(".center-button").onclick=()=>iniciar("all","Modo Aleatorio");
+
+function iniciar(tipo,nombre){
+const menu=document.getElementById("menuScreen");
+const quiz=document.getElementById("quizScreen");
+
+menu.style.opacity=0;
+setTimeout(()=>{
+menu.style.display="none";
+quiz.style.display="flex";
+setTimeout(()=>quiz.classList.add("show"),50);
+},400);
+
+if(tipo==="all"){
+tareaActual=[...tareas[1],...tareas[2],...tareas[3],...tareas[4],...tareas[5]];
+}else{
+tareaActual=tareas[tipo];
+}
+
+perguntasUsadas = []; // reset ao iniciar nova tarefa
+document.getElementById("modoAtual").innerText=nombre;
+siguiente();
+}
+
+// Função que pega pergunta sem repetir
+function pegarPerguntaAleatoria(listaPerguntas){
+  if(perguntasUsadas.length === listaPerguntas.length){
+    perguntasUsadas = []; // reset quando todas usadas
+  }
+  let pergunta;
+  do {
+    const indice = Math.floor(Math.random()*listaPerguntas.length);
+    pergunta = listaPerguntas[indice];
+  } while(perguntasUsadas.includes(pergunta.id));
+  perguntasUsadas.push(pergunta.id);
+  return pergunta;
+}
+
+function siguiente(){
+respondido=false;
+preguntaActual = pegarPerguntaAleatoria(tareaActual);
+mostrar();
+}
+
+function mostrar(){
+const quiz=document.getElementById("quiz");
+quiz.innerHTML=`
+<h3 class="animate-in">${preguntaActual.id} - ${preguntaActual.pergunta}</h3>
+<button class="button respuesta" data="A">A) ${preguntaActual.alternativas.A}</button>
+<button class="button respuesta" data="B">B) ${preguntaActual.alternativas.B}</button>
+<button class="button respuesta" data="C">C) ${preguntaActual.alternativas.C}</button>
+`;
+
+document.querySelectorAll(".respuesta").forEach((b,i)=>{
+setTimeout(()=>b.classList.add("animate-in"),i*100);
+b.onclick=()=>responder(b);
+});
+}
+
+function responder(btn){
+if(respondido)return;
+respondido=true;
+
+const letra=btn.getAttribute("data");
+document.querySelectorAll(".respuesta").forEach(b=>b.classList.add("disabled"));
+
+if(letra===preguntaActual.correta){
+btn.classList.add("correct");
+aciertos++;
+}else{
+btn.classList.add("wrong");
+errores++;
+document.querySelectorAll(".respuesta").forEach(b=>{
+if(b.getAttribute("data")===preguntaActual.correta){
+b.classList.add("correct");
+}
+});
+}
+
+document.getElementById("acertos").innerText=aciertos;
+document.getElementById("erros").innerText=errores;
+}
+
+document.querySelector(".proxima").onclick=siguiente;
+
+document.querySelector(".voltar").onclick=()=>{
+const menu=document.getElementById("menuScreen");
+const quiz=document.getElementById("quizScreen");
+
+quiz.classList.remove("show");
+setTimeout(()=>{
+quiz.style.display="none";
+menu.style.display="block";
+setTimeout(()=>menu.style.opacity=1,50);
+},400);
+};
+</script>
+
+</body>
+</html>
