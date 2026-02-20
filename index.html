@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz de España</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+:root{
+  --bg-light:#f2f2f2;
+  --gradient-top:#d4f5e9;
+  --card:#ffffff;
+  --green:#16a085;
+  --green-dark:#13856e;
+  --green-soft:#1abc9c;
+  --green-soft-dark:#17a589;
+  --correct:#4CAF50;
+  --wrong:#E53935;
+  --text:#2c3e50;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Montserrat',sans-serif;}
+
+body{
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:20px;
+  position:relative;
+  background:var(--bg-light);
+}
+
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background:linear-gradient(to bottom,var(--gradient-top) 0%,var(--bg-light) 45%);
+  z-index:-1;
+}
+
+.container{
+  width:100%;
+  max-width:500px;
+  background:var(--card);
+  padding:30px;
+  border-radius:18px;
+  box-shadow:0 15px 35px rgba(0,0,0,0.08);
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  position:relative;
+  overflow:hidden;
+}
+
+.container::before{
+  content:"";
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:6px;
+  background:linear-gradient(to right,var(--green-soft),var(--green));
+}
+
+h1{
+  text-align:center;
+  font-size:1.9rem;
+  font-weight:700;
+  color:var(--text);
+  margin-bottom:15px;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  font-weight:600;
+  cursor:pointer;
+  transition:0.25s ease;
+}
+
+.center-button{background:var(--green);color:white;}
+.center-button:hover{background:var(--green-dark);}
+.tarea{background:var(--green-soft);color:white;margin-bottom:5px;}
+.tarea:hover{background:var(--green-soft-dark);}
+.button{margin:5px 0;}
+.proxima{background:var(--green);color:white;}
+.voltar{background:#999;color:white;}
+.correct{background:var(--correct)!important;color:white!important;}
+.wrong{background:var(--wrong)!important;color:white!important;}
+.disabled{pointer-events:none;opacity:.85;}
+
+.section-title{
+  margin:15px 0 5px;
+  font-weight:600;
+  border-bottom:2px solid #eee;
+  padding-bottom:5px;
+}
+
+#menuScreen{transition:opacity .4s ease;}
+
+#quizScreen{
+  display:none;
+  flex-direction:column;
+  opacity:0;
+  transition:opacity .4s ease;
+}
+
+#quizScreen.show{opacity:1;}
+
+.top-info{
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:15px;
+  font-size:13px;
+}
+
+.animate-in{
+  animation:slideIn .6s ease forwards;
+}
+
+@keyframes slideIn{
+  0%{opacity:0;transform:translateY(8px);}
+  60%{opacity:1;transform:translateY(-2px);}
+  80%{transform:translateY(1px);}
+  100%{opacity:1;transform:translateY(0);}
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<div id="menuScreen">
+  <h1>Quiz de España</h1>
+
+  <button class="center-button">🎲 Aleatorio (Todas las Tareas)</button>
+
+  <div class="section-title">Preguntas por Tarea</div>
+
+  <button class="tarea">TAREA 1 - Gobierno, legislación</button>
+  <button class="tarea">TAREA 2 - Derechos y deberes</button>
+  <button class="tarea">TAREA 3 - Geografía física y política</button>
+  <button class="tarea">TAREA 4 - Cultura e historia</button>
+  <button class="tarea">TAREA 5 - Sociedad española</button>
+</div>
+
+<div id="quizScreen">
+  <div class="top-info">
+    <div id="modoAtual"></div>
+    <div>✅ <span id="acertos">0</span> | ❌ <span id="erros">0</span></div>
+  </div>
+
+  <div id="quiz"></div>
+
+  <button class="button proxima">Próxima</button>
+  <button class="button voltar">Volver al Menú</button>
+</div>
+
+</div>
+
+<script>
+
+/* =====================================================
+   📚 ÁREA DE PERGUNTAS (EDITAR AQUI)
+   ===================================================== */
+
+const tareas = {
+  1:[
+    {id:1001, pergunta:"España es…", alternativas:{A:"una monarquía parlamentaria.", B:"una república federal.", C:"una monarquía federal."}, correta:"A"},
+    {id:1002, pergunta:"La ley fundamental de España se llama…", alternativas:{A:"Constitución.", B:"Ley básica.", C:"Ordenamiento esencial."}, correta:"A"},
+    {id:1003, pergunta:"Según la Constitución española, la soberanía nacional reside en…", alternativas:{A:"el pueblo español.", B:"el Gobierno del Estado.", C:"el Congreso de los Diputados."}, correta:"A"},
+    {id:1004, pergunta:"El Instituto de las Mujeres es…", alternativas:{A:"una institución europea.", B:"un organismo español.", C:"una ONG."}, correta:"B"},
+    {id:1005, pergunta:"¿Cuándo puedo hacer los trámites en la sede electrónica?", alternativas:{A:"En cualquier horario.", B:"Únicamente por la mañana.", C:"De lunes a viernes."}, correta:"A"},
+    {id:1006, pergunta:"El castellano o español es lengua oficial…", alternativas:{A:"en toda España.", B:"solo donde no hay outras lenguas.", C:"en toda la península ibérica."}, correta:"A"},
+    {id:1007, pergunta:"¿Cuál de estas fuerzas de segurança es de ámbito autonómico?", alternativas:{A:"Policía local.", B:"Guardia Civil.", C:"Policía Foral de Navarra."}, correta:"C"},
+    {id:1008, pergunta:"¿Qué fuerza de seguridad está en toda España?", alternativas:{A:"La Policía Foral de Navarra.", B:"El Cuerpo Nacional de Policía.", C:"Los Mossos d’Esquadra."}, correta:"B"},
+    {id:1009, pergunta:"En la Constitución se establece la separación de poderes: el poder ejecutivo, el legislativo y el…", alternativas:{A:"judicial.", B:"informativo.", C:"político."}, correta:"A"},
+    {id:1010, pergunta:"La bandera de España debe utilizarse…", alternativas:{A:"solo los días de fiesta oficial.", B:"en todos los edificios públicos.", C:"solo en actos del Gobierno español."}, correta:"B"},
+    {id:1011, pergunta:"¿Quién es el jefe del Estado en España?", alternativas:{A:"El presidente del Gobierno.", B:"El rey.", C:"El ministro de Economía."}, correta:"B"},
+    {id:1012, pergunta:"La gestión de la sanidad es competencia de…", alternativas:{A:"el Estado.", B:"las comunidades autónomas.", C:"los ayuntamientos."}, correta:"B"},
+    {id:1013, pergunta:"¿Quién fue el primer presidente del Gobierno de España en democracia?", alternativas:{A:"Mariano Rajoy.", B:"Adolfo Suárez.", C:"José Luis Rodríguez Zapatero."}, correta:"B"},
+    {id:1014, pergunta:"¿Cuál de estos organismos se encarga de interpretar la Constitución?", alternativas:{A:"El Poder Constitucional.", B:"El Tribunal Constitucional.", C:"El Consejo General del Poder Judicial."}, correta:"B"},
+    {id:1015, pergunta:"¿Quién modera el funcionamiento de las instituciones españolas?", alternativas:{A:"El presidente del Gobierno.", B:"El rey.", C:"El director de la Real Academia Española."}, correta:"B"},
+    {id:1016, pergunta:"¿Cómo se llama la cámara de representación territorial en España?", alternativas:{A:"Senado.", B:"Diputación permanente.", C:"Congreso de los Diputados."}, correta:"A"},
+    {id:1017, pergunta:"¿Qué se necesita para hacer trámites por internet con la Administración?", alternativas:{A:"Un pasaporte válido.", B:"Una firma electrónica.", C:"Una firma en papel."}, correta:"B"},
+    {id:1018, pergunta:"¿Cómo se aprobó la Constitución?", alternativas:{A:"Por imposición legal.", B:"Por referéndum.", C:"Por el Tribunal Constitucional."}, correta:"B"},
+    {id:1019, pergunta:"¿Cómo se llama la ley más importante de cada comunidad autónoma?", alternativas:{A:"Estatuto de Autonomía.", B:"Normativa autonómica.", C:"Ley de la comunidad."}, correta:"A"},
+    {id:1020, pergunta:"Las instalaciones culturales y deportivas públicas son competencia del…", alternativas:{A:"Ayuntamiento.", B:"Ministerio de Educación, Formación Profesional y Deportes.", C:"Ministerio de Igualdad."}, correta:"A"},
+    {id:1021, pergunta:"¿Quién dirige la administración militar de España?", alternativas:{A:"Los ayuntamientos.", B:"El Gobierno.", C:"Las Cortes Generales."}, correta:"B"},
+    {id:1022, pergunta:"¿Qué hay en las Islas Baleares, en vez de diputaciones?", alternativas:{A:"Cabildos.", B:"Consejos insulares.", C:"Centros de diputados."}, correta:"B"},
+    {id:1023, pergunta:"¿Qué ciudad tiene más habitantes?", alternativas:{A:"Sevilla.", B:"Barcelona.", C:"Zaragoza."}, correta:"B"},
+    {id:1024, pergunta:"Las Cortes Generales representan…", alternativas:{A:"al pueblo español.", B:"a los partidos políticos.", C:"a los ministros."}, correta:"A"},
+    {id:1025, pergunta:"El Congreso de los Diputados y el Senado constituyen el poder…", alternativas:{A:"ejecutivo.", B:"legislativo.", C:"judicial."}, correta:"B"},
+    {id:1026, pergunta:"¿Cómo pueden los ciudadanos proponer nuevas leyes al Congreso?", alternativas:{A:"Reuniendo 500 000 firmas.", B:"Solicitándolo al rey.", C:"Creando una asociación."}, correta:"A"},
+    {id:1027, pergunta:"¿Cuántas comunidades autónomas hay en España?", alternativas:{A:"8.", B:"17.", C:"25."}, correta:"B"},
+    {id:1028, pergunta:"Los colores de la bandera española son…", alternativas:{A:"blanco y rojo.", B:"rojo y amarillo.", C:"amarillo y blanco."}, correta:"B"},
+    {id:1029, pergunta:"¿Dónde está la sede del Gobierno de España?", alternativas:{A:"En Madrid.", B:"En Barcelona.", C:"En Sevilla."}, correta:"A"},
+    {id:1030, pergunta:"La bandera azul con 12 estrellas amarillas en círculo es la bandera de…", alternativas:{A:"la Unión Europea.", B:"el Parlamento Europeo.", C:"la Comisión de Europa."}, correta:"A"},
+    {id:1031, pergunta:"En las elecciones municipales se vota a…", alternativas:{A:"alcaldes y concejales.", B:"ministros y ministras.", C:"diputados y senadores."}, correta:"A"},
+    {id:1032, pergunta:"¿Qué lengua es oficial en el País Vasco?", alternativas:{A:"El bable.", B:"El aragonés.", C:"El euskera."}, correta:"C"},
+    {id:1033, pergunta:"Todos los españoles tienen el deber de conocer la lengua…", alternativas:{A:"autonómica del Estado.", B:"oficial del Estado.", C:"local del Estado."}, correta:"B"},
+    {id:1034, pergunta:"El aranés es una lengua cooficial que se habla en un pequeño territorio de…", alternativas:{A:"Cataluña.", B:"La Rioja.", C:"Aragón."}, correta:"A"},
+    {id:1035, pergunta:"Las instituciones de una comunidad autónoma son: el consejo de gobierno, el presidente y…", alternativas:{A:"el ayuntamiento.", B:"la asamblea legislativa.", C:"la delegación de gobierno."}, correta:"B"},
+    {id:1036, pergunta:"¿Cuál de estas opciones es una lengua cooficial en alguna comunidad autónoma?", alternativas:{A:"El gallego.", B:"El aragonés.", C:"El murciano."}, correta:"A"},
+    {id:1037, pergunta:"¿Qué institution tiene como fin la promoción de la enseñanza de la lengua española y la difusión de la cultura en español?", alternativas:{A:"El Instituto Nacional de Administración Pública.", B:"El Instituto Nacional de Estadística.", C:"El Instituto Cervantes."}, correta:"C"},
+    {id:1038, pergunta:"¿Cuál de los siguientes organismos trabaja para conseguir la normalización lingüística?", alternativas:{A:"El Institut Ramon Llull.", B:"El Instituto Cervantes.", C:"La Real Academia Española."}, correta:"C"},
+    {id:1039, pergunta:"¿Dónde vive el presidente del Gobierno?", alternativas:{A:"En el Palacio Real.", B:"En el Palacio de la Zarzuela.", C:"En el Palacio de la Moncloa."}, correta:"C"},
+    {id:1040, pergunta:"¿Cuál de los siguientes cuerpos forma parte de las Fuerzas Armadas de España?", alternativas:{A:"La Policía Foral.", B:"La Guardia Civil.", C:"El Ejército del Aire."}, correta:"C"},
+    {id:1041, pergunta:"¿Quiénes forman parte del Gobierno?", alternativas:{A:"Los ministros.", B:"Los concejales.", C:"Los alcaldes."}, correta:"A"},
+    {id:1042, pergunta:"España es un…", alternativas:{A:"estado social y democrático de Derecho.", B:"estado libre asociado.", C:"estado confederado."}, correta:"A"},
+    {id:1043, pergunta:"¿Cuál de las siguientes siglas corresponde a un partido político?", alternativas:{A:"PP.", B:"PIB.", C:"UE."}, correta:"A"},
+    {id:1044, pergunta:"¿Qué título tiene la futura reina, hija del rey?", alternativas:{A:"Princesa de Asturias.", B:"Princesa de Aragón.", C:"Duquesa de Alba."}, correta:"A"},
+    {id:1045, pergunta:"¿Con qué rey se restaura la democracia en España después del régimen de Franco?", alternativas:{A:"Con Carlos III.", B:"Con Alfonso XIII.", C:"Con Juan Carlos I."}, correta:"C"},
+    {id:1046, pergunta:"¿En qué año se aprobó la Constitución española?", alternativas:{A:"En 1957.", B:"En 1978.", C:"En 2001."}, correta:"B"},
+    {id:1047, pergunta:"¿Cuántas comunidades autónomas tienen su propia bandera?", alternativas:{A:"Ninguna.", B:"Todas.", C:"Las que tienen una lengua cooficial."}, correta:"B"},
+    {id:1048, pergunta:"¿Qué organismo oficial atiende las quejas de los ciudadanos por el mal funcionamiento de las administraciones?", alternativas:{A:"La Oficina de Atención al Consumidor.", B:"La Policía Nacional.", C:"El Defensor del Pueblo."}, correta:"C"},
+    {id:1049, pergunta:"¿Cuántas firmas, como mínimo, deben recoger los ciudadanos para poder presentar una proposición de ley?", alternativas:{A:"250 000.", B:"100 000.", C:"500 000."}, correta:"C"},
+    {id:1050, pergunta:"¿A cuál de las siguientes organizaciones internacionales pertenece España?", alternativas:{A:"Comunidad de Estados Independientes (CEI).", B:"Fondo Monetario Internacional (FMI).", C:"Unión Económica Euroasiática (UEE)."}, correta:"B"},
+    {id:1051, pergunta:"En la organización de la Administración se distinguen tres niveles: central, autonómica y…", alternativas:{A:"estatal.", B:"regional.", C:"local."}, correta:"C"},
+    {id:1052, pergunta:"El poder legislativo corresponde...", alternativas:{A:"el presidente y los ministros.", B:"a los jueces y magistrados.", C:"a los diputados y senadores."}, correta:"C"},
+    {id:1053, pergunta:"¿Dónde vive el rey?", alternativas:{A:"En el Palacio de la Moneda.", B:"En el Palacio de la Zarzuela.", C:"En el Palacio de la Moncloa."}, correta:"B"},
+    {id:1054, pergunta:"El nombre oficial del parlamento español es…", alternativas:{A:"Cortes Generales.", B:"Congreso de los Diputados.", C:"Senado."}, correta:"A"},
+    {id:1055, pergunta:"El Instituto de Comercio Exterior de España, el Instituto de las Mujeres y la Dirección General de Tráfico…", alternativas:{A:"son organismos autónomos.", B:"dependen de ministerios.", C:"son organismos internacionales."}, correta:"B"},
+    {id:1056, pergunta:"¿Quién puede reinar en España?", alternativas:{A:"Solo los hombres.", B:"Solo las mujeres.", C:"Tanto los hombres como las mujeres."}, correta:"C"},
+    {id:1057, pergunta:"El Tribunal de Cuentas depende de…", alternativas:{A:"la Presidencia del Gobierno.", B:"las Cortes Generales.", C:"el Ministerio de Hacienda."}, correta:"B"},
+    {id:1058, pergunta:"¿Quién es la tercera autoridad del Estado, después del rey y el presidente del Gobierno?", alternativas:{A:"El presidente del Senado.", B:"El ministro de Economía.", C:"El presidente del Congreso de los Diputados."}, correta:"C"},
+    {id:1059, pergunta:"¿Qué lengua cooficial se habla en las Islas Baleares?", alternativas:{A:"Gallego.", B:"Catalán.", C:"Euskera."}, correta:"B"},
+    {id:1060, pergunta:"La Constitución defiende valores tales como la libertad, la igualdad, el pluralismo político y…", alternativas:{A:"la justicia.", B:"la solidaridad.", C:"la fraternidad."}, correta:"A"},
+    {id:1061, pergunta:"Cuando una ley ya está aprobada, ¿qué necesita para poder aplicarse?", alternativas:{A:"Nada.", B:"Normas que la desarrollen.", C:"Ser revisada por el Parlamento."}, correta:"B"},
+    {id:1062, pergunta:"¿Cuántos habitantes hay en España?", alternativas:{A:"95 millones.", B:"49 millones.", C:"67 millones."}, correta:"B"},
+    {id:1063, pergunta:"¿Cuál de estos es un órgano consultivo del Gobierno de España?", alternativas:{A:"El Parlamento Europeo.", B:"El Consejo de Estado.", C:"El Tribunal Constitucional."}, correta:"B"},
+    {id:1064, pergunta:"¿Quién dirige la política interior y exterior de España?", alternativas:{A:"El rey.", B:"El Gobierno.", C:"El Congreso de los Diputados."}, correta:"B"},
+    {id:1065, pergunta:"El Defensor del Pueblo depende de…", alternativas:{A:"el Consejo de Ministros.", B:"el Tribunal de Cuentas.", C:"las Cortes Generales."}, correta:"C"},
+    {id:1066, pergunta:"El Instituto Etxepare tiene como misión la difusión del…", alternativas:{A:"euskera y la cultura vasca.", B:"bable y la cultura cántabra.", C:"gallego y la cultura galaica."}, correta:"A"},
+    {id:1067, pergunta:"¿Cuál de estas ciudades se encuentra entre las 10 más pobladas de España?", alternativas:{A:"Cádiz.", B:"Málaga.", C:"Albacete."}, correta:"B"},
+    {id:1068, pergunta:"¿Quién puede realizar trámites en línea ante la Administración Pública?", alternativas:{A:"Jueces y magistrados.", B:"Cualquier ciudadano.", C:"Abogados colegiados."}, correta:"B"},
+    {id:1069, pergunta:"¿Cómo se llama el rey de España?", alternativas:{A:"Juan Carlos I.", B:"Felipe VI.", C:"Alfonso XIII."}, correta:"B"},
+    {id:1070, pergunta:"¿Cómo se llama el órgano de gobierno de los jueces y magistrados?", alternativas:{A:"Tribunal Supremo.", B:"Consejo General del Poder Judicial.", C:"Consejo de Estado."}, correta:"B"},
+    {id:1071, pergunta:"¿Quién aprueba los presupuestos generales del Estado?", alternativas:{A:"Las Cortes Generales.", B:"El Tribunal de Cuentas.", C:"El Gobierno de España."}, correta:"A"},
+    {id:1072, pergunta:"La Constitución española es…", alternativas:{A:"la ley fundamental.", B:"parte de otra ley.", C:"una ley secundaria."}, correta:"A"},
+    {id:1073, pergunta:"Las Cortes Generales están compuestas por el Senado y…", alternativas:{A:"el Congreso de los Diputados.", B:"el Tribunal Supremo.", C:"el Consejo de Estado."}, correta:"A"},
+    {id:1074, pergunta:"¿Quién elabora las leyes?", alternativas:{A:"El poder ejecutivo.", B:"El poder legislativo.", C:"El poder judicial."}, correta:"B"},
+    {id:1075, pergunta:"La defensa de la integridad territorial de España corresponde a…", alternativas:{A:"la Policía Nacional y la Guardia Civil.", B:"las Fuerzas Armadas.", C:"la Policía Nacional y las policías autonómicas."}, correta:"B"},
+    {id:1076, pergunta:"El Ejército español participa desde 1989 en misiones de paz de la…", alternativas:{A:"Organización de Estados Iberoamericanos (OEI).", B:"Unión Europea Occidental (UEO).", C:"Organización de las Naciones Unidas (ONU)."}, correta:"C"},
+    {id:1077, pergunta:"¿Quién vigila puertos y aeropuertos, fronteras y costas?", alternativas:{A:"La Guardia Civil.", B:"La Policía local.", C:"La Policía Nacional."}, correta:"A"},
+    {id:1078, pergunta:"¿Quién hace el control de pasaportes en las fronteras de España?", alternativas:{A:"La Guardia Civil.", B:"La Policía local.", C:"La Policía Nacional."}, correta:"C"},
+    {id:1079, pergunta:"¿Cuál de los siguientes políticos ha sido presidente del Gobierno en España?", alternativas:{A:"Manuel Fraga.", B:"José María Aznar.", C:"Yolanda Díaz."}, correta:"B"},
+    {id:1080, pergunta:"¿Cómo se llama la policía autonómica de Cataluña?", alternativas:{A:"Guardia Civil.", B:"Ertzaintza.", C:"Mossos d'Esquadra."}, correta:"C"},
+    {id:1081, pergunta:"¿Cómo se llama la policía autonómica del País Vasco?", alternativas:{A:"Ertzaintza.", B:"Guardia Civil.", C:"Mossos d'Esquadra."}, correta:"A"},
+    {id:1082, pergunta:"¿Desde qué año es rey Felipe VI?", alternativas:{A:"Desde 1975.", B:"Desde 2014.", C:"Desde 2020."}, correta:"B"},
+    {id:1083, pergunta:"¿Quién regula el tráfico en los pueblos y ciudades?", alternativas:{A:"La Guardia Civil.", B:"Protección Civil.", C:"La Policía Local."}, correta:"C"},
+    {id:1084, pergunta:"¿Quién puede presentar una queja al Defensor del Pueblo?", alternativas:{A:"Solo los ciudadanos legalmente residentes.", B:"Solo los españoles mayores de 18 años.", C:"Todos los ciudadanos, españoles o extranjeros."}, correta:"C"},
+    {id:1085, pergunta:"En España el voto en las elecciones es…", alternativas:{A:"un derecho.", B:"un deber.", C:"una obligación."}, correta:"A"},
+    {id:1086, pergunta:"¿Quién vigila el tráfico en las carreteras?", alternativas:{A:"La Guardia Civil.", B:"La Policía Nacional.", C:"El Ejército de Tierra."}, correta:"A"},
+    {id:1087, pergunta:"¿Qué organismo se encarga de recaudar los impuestos?", alternativas:{A:"El Tribunal de Cuentas.", B:"La Agencia Tributaria.", C:"El Consejo Económico y Social."}, correta:"B"},
+    {id:1088, pergunta:"¿Dónde se publican las leyes nacionales?", alternativas:{A:"En el boletín del Instituto Nacional de Estadística (INE).", B:"En el Portal de la Administración Electrónica (PAe).", C:"En el Boletín Oficial del Estado (BOE)."}, correta:"C"},
+    {id:1089, pergunta:"¿Cómo se llaman los órganos de governo que solo existen en Canarias?", alternativas:{A:"Cabildos.", B:"Consejos insulares.", C:"Diputaciones."}, correta:"A"},
+    {id:1090, pergunta:"¿Cuál de estos trámites administrativos puede realizarse en la sede electrónica?", alternativas:{A:"Tramitar el DNI.", B:"Renovar el pasaporte.", C:"Pagar los impuestos."}, correta:"C"},
+    {id:1091, pergunta:"¿Cuál es el número de teléfono de información de la Administración General del Estado?", alternativas:{A:"010.", B:"060.", C:"091."}, correta:"B"},
+    {id:1092, pergunta:"España está organizada en…", alternativas:{A:"cantones.", B:"comunidades autónomas.", C:"estados federales."}, correta:"B"},
+    {id:1093, pergunta:"¿Cuántos partidos políticos hay en España?", alternativas:{A:"Ninguno.", B:"Uno.", C:"Muchos."}, correta:"C"},
+    {id:1094, pergunta:"¿Dónde tiene lugar la investidura del presidente del Gobierno?", alternativas:{A:"En el Palacio de la Moncloa.", B:"En el Congreso de los Diputados.", C:"En el Senado."}, correta:"B"},
+    {id:1095, pergunta:"¿Quién tiene el mando supremo de las Fuerzas Armadas?", alternativas:{A:"El rey.", B:"El presidente del Gobierno.", C:"El ministro de Defensa."}, correta:"A"},
+    {id:1096, pergunta:"¿Quién es el representante del Estado en una comunidad autónoma?", alternativas:{A:"El presidente de la comunidad autónoma.", B:"El delegado del Gobierno.", C:"El presidente de la Asamblea autonómica."}, correta:"B"},
+    {id:1097, pergunta:"¿Cuántas provincias hay en España?", alternativas:{A:"45.", B:"50.", C:"55."}, correta:"B"},
+    {id:1098, pergunta:"La enseñanza de las lenguas cooficiales es competencia…", alternativas:{A:"del Estado.", B:"de la comunidad autónoma.", C:"de la provincia."}, correta:"B"},
+    {id:1099, pergunta:"El poder ejecutivo corresponde…", alternativas:{A:"al Gobierno del Estado.", B:"al Congreso y al Senado.", C:"a los jueces y magistrados."}, correta:"A"},
+    {id:1100, pergunta:"¿Cuántas cámaras hay en el Parlamento español?", alternativas:{A:"Una.", B:"Dos.", C:"Tres."}, correta:"B"},
+    {id:1101, pergunta:"El suministro de agua y el alumbrado de las ciudades es competencia de…", alternativas:{A:"el ayuntamiento.", B:"el Gobierno autonómico.", C:"el Ministerio de Obras Públicas y Urbanismo."}, correta:"A"},
+    {id:1102, pergunta:"En materias como nacionalidad, inmigración, emigración o extranjería solo tiene competencia…", alternativas:{A:"el Estado.", B:"las comunidades autónomas.", C:"los ayuntamientos."}, correta:"A"},
+    {id:1103, pergunta:"¿Cuántas mujeres han sido presidentas de Gobierno en España?", alternativas:{A:"Ninguna.", B:"Una.", C:"Dos."}, correta:"A"},
+    {id:1104, pergunta:"Las relaciones internacionales son competencia de…", alternativas:{A:"el Estado.", B:"las comunidades autónomas.", C:"los ayuntamientos."}, correta:"A"},
+    {id:1105, pergunta:"El Ayuntamiento está formado por el alcalde y…", alternativas:{A:"los concejales.", B:"los diputados.", C:"los senadores."}, correta:"A"},
+    {id:1106, pergunta:"¿Quiénes forman el gobierno de las comunidades autónomas?", alternativas:{A:"El presidente y los ministros.", B:"El alcalde y los concejales.", C:"El presidente y los consejeros."}, correta:"C"},
+    {id:1107, pergunta:"¿Cuál es el órgano de gobierno en los municipios?", alternativas:{A:"El ayuntamiento.", B:"La diputación.", C:"El cabildo."}, correta:"A"},
+    {id:1108, pergunta:"¿Cómo se llaman los órganos de gobierno de las provincias españolas?", alternativas:{A:"Cabildos.", B:"Consejos insulares.", C:"Diputaciones."}, correta:"C"},
+    {id:1109, pergunta:"¿Cuál es el órgano superior del poder ejecutivo?", alternativas:{A:"El Gobierno.", B:"Las Fuerzas Armadas.", C:"Las Cortes Generales."}, correta:"A"},
+    {id:1110, pergunta:"El idioma español también se llama…", alternativas:{A:"aragonés.", B:"castellano.", C:"leonés."}, correta:"B"},
+    {id:1111, pergunta:"¿A quiénes se elige en las elecciones al Parlamento Europeo?", alternativas:{A:"A los ministros europeos.", B:"A los consejeros delegados.", C:"A los eurodiputados."}, correta:"C"},
+    {id:1112, pergunta:"Los españoles pueden votar a partir de los…", alternativas:{A:"16 años.", B:"18 años.", C:"21 años."}, correta:"B"},
+    {id:1113, pergunta:"Algunos ciudadanos extranjeros pueden votar en las elecciones…", alternativas:{A:"municipales.", B:"autonómicas.", C:"generales."}, correta:"A"},
+    {id:1114, pergunta:"¿Quién controla la gestión financiera del Estado?", alternativas:{A:"El Banco de España.", B:"La Agencia Tributaria.", C:"El Tribunal de Cuentas."}, correta:"C"},
+    {id:1115, pergunta:"¿A quiénes se elige en las elecciones generales?", alternativas:{A:"A los senadores y diputados.", B:"A los eurodiputados.", C:"A los concejales."}, correta:"A"},
+    {id:1116, pergunta:"¿Cuántos miembros tiene el Congreso de los Diputados?", alternativas:{A:"300.", B:"350.", C:"400."}, correta:"B"},
+    {id:1117, pergunta:"Los municipios y provincias forman parte de la Administración…", alternativas:{A:"autonómica.", B:"local.", C:"central."}, correta:"B"},
+    {id:1118, pergunta:"La comunidad autónoma más poblada de España es…", alternativas:{A:"Andalucía.", B:"Cataluña.", C:"Castilla y León."}, correta:"A"},
+    {id:1119, pergunta:"¿Cómo se llama la organización que defiende los intereses de los trabajadores?", alternativas:{A:"Asociación.", B:"Partido.", C:"Sindicato."}, correta:"C"},
+    {id:1120, pergunta:"¿Quién elige al presidente del Gobierno?", alternativas:{A:"El Congreso de los Diputados.", B:"El rey.", C:"El Tribunal Supremo."}, correta:"A"}
+],
+  2:[
+    {id:2001, pergunta:"En España, la Constitución obliga a todos los ciudadanos a practicar una religión.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"B"},
+    {id:2002, pergunta:"Los españoles que obtienen la nacionalidad por residencia deben esperar tres años para poder votar en las elecciones.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"B"},
+    {id:2003, pergunta:"En España, la Constitución prohíbe la tortura y la pena de muerte.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2004, pergunta:"El funcionamiento de los partidos políticos tiene que ser democrático.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2005, pergunta:"Se puede obligar a alguien a decir cuáles son sus ideas políticas o religiosas.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"B"},
+    {id:2006, pergunta:"Se puede limitar a una persona el derecho a entrar y salir libremente de España por motivos ideológicos.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"B"},
+    {id:2007, pergunta:"La Educación Primaria (de 6 a 12 años) es gratuita y obligatoria.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2008, pergunta:"La Constitución garantiza el derecho de los españoles a una vivienda digna.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2009, pergunta:"En España la policía puede entrar en cualquier casa sin resolución judicial en cualquier momento.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"B"},
+    {id:2010, pergunta:"Se garantiza el secreto de las comunicaciones de los españoles, salvo resolución judicial.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2011, pergunta:"La Constitución reconoce el derecho de los ciudadanos a asociarse libremente.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2012, pergunta:"Los profesores pueden enseñar con libertad, dentro de los límites de la Constitución.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2013, pergunta:"La Constitución reconoce únicamente los derechos fundamentales de los españoles.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"B"},
+    {id:2014, pergunta:"Los ciudadanos deben colaborar con los jueces si se lo piden.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2015, pergunta:"La ley limita el acceso de terceras personas a datos de carácter personal.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2016, pergunta:"La libertad de prensa está limitada por el respeto al honor de las personas.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2017, pergunta:"En España las causas de separación y divorcio están reguladas por la ley.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2018, pergunta:"La atención sanitaria gratuita es solo para personas mayores de 65 años.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"B"},
+    {id:2019, pergunta:"En España los hombres y las mujeres tienen los mismos derechos.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2020, pergunta:"La enseñanza obligatoria consta de dos etapas: Educación Primaria y Educación Secundaria Obligatoria.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2021, pergunta:"En España hay una religión oficial.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"B"},
+    {id:2022, pergunta:"La atención sanitaria pública es gratuita.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2023, pergunta:"La enseñanza básica en España es solo para los extranjeros.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"B"},
+    {id:2024, pergunta:"En España está reconocido el derecho de asociación.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2025, pergunta:"Los sindicatos pueden participar en negociaciones con empresarios y con el Gobierno.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2026, pergunta:"Los trabajadores tienen derecho a hacer huelga.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2027, pergunta:"La libertad ideológica está garantizada solo en parte del territorio nacional.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"B"},
+    {id:2028, pergunta:"Todos los ciudadanos tienen acceso al sistema de Seguridad Social público, excepto si están desempleados.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"B"},
+    {id:2029, pergunta:"Todos tienen derecho a disfrutar de un medio ambiente adecuado para el desarrollo de la persona, así como el deber de conservarlo.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2030, pergunta:"En España, los poderes públicos deben proteger la salud y promover el deporte.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2031, pergunta:"La enseñanza básica en España es obligatoria y gratuita.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2032, pergunta:"La ley prohíbe la discriminación por cualquier circunstancia personal o social.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2033, pergunta:"En España, los ciudadanos pueden desplazarse libremente por todo el territorio nacional.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2034, pergunta:"Los jueces administran la justicia en España según las indicaciones del Gobierno.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"B"},
+    {id:2035, pergunta:"Los españoles deben ayudar en los casos de catástrofe o calamidad pública.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"},
+    {id:2036, pergunta:"En España los ciudadanos pueden elegir en qué ciudad quieren vivir.", alternativas:{A:"Verdadero.", B:"Falso."}, correta:"A"}
+],
+  3:[
+    {id:3001, pergunta:"¿Dónde están Cáceres y Badajoz?", alternativas:{A:"En el Principado de Asturias.", B:"En Andalucía.", C:"En Extremadura."}, correta:"C"},
+    {id:3002, pergunta:"¿Cuál es la capital la Comunidad Valenciana?", alternativas:{A:"Alicante.", B:"Castellón.", C:"Valencia."}, correta:"C"},
+    {id:3003, pergunta:"¿Dónde están las islas Baleares?", alternativas:{A:"En el mar Cantábrico.", B:"En el mar Mediterráneo.", C:"En el océano Atlántico."}, correta:"B"},
+    {id:3004, pergunta:"¿Cómo se llama la extensa llanura situada en el centro de la península ibérica?", alternativas:{A:"Marisma.", B:"Cordillera.", C:"Meseta."}, correta:"C"},
+    {id:3005, pergunta:"El parque nacional de Ordesa está en...", alternativas:{A:"Aragón.", B:"Navarra.", C:"Castilla-La Mancha."}, correta:"A"},
+    {id:3006, pergunta:"¿En qué comunidad autónoma están Guadalajara y Cuenca?", alternativas:{A:"En Castilla y León.", B:"En Castilla-La Mancha.", C:"En Cantabria."}, correta:"B"},
+    {id:3007, pergunta:"¿Qué comunidad autónoma tiene como capital Santiago de Compostela?", alternativas:{A:"Galicia.", B:"Asturias.", C:"Cantabria."}, correta:"A"},
+    {id:3008, pergunta:"¿Dónde está Almería?", alternativas:{A:"En Andalucía.", B:"En Canarias.", C:"En Aragón."}, correta:"A"},
+    {id:3009, pergunta:"La capital de la comunidad autónoma de Galicia es…", alternativas:{A:"A Coruña.", B:"Vigo.", C:"Santiago de Compostela."}, correta:"C"},
+    {id:3010, pergunta:"¿Cuál de estos ríos desemboca en el mar Mediterráneo?", alternativas:{A:"El Tajo.", B:"El Júcar.", C:"El Duero."}, correta:"B"},
+    {id:3011, pergunta:"¿Dónde está el monte Aneto?", alternativas:{A:"En los Pirineos.", B:"En el Sistema Central.", C:"En Sierra Nevada."}, correta:"A"},
+    {id:3012, pergunta:"La ciudad de Vitoria es la sede administrativa de…", alternativas:{A:"Navarra.", B:"País Vasco.", C:"La Rioja."}, correta:"B"},
+    {id:3013, pergunta:"España se divide en…", alternativas:{A:"departamentos y regiones.", B:"comunidades y ciudades autónomas.", C:"regiones autónomas y distritos."}, correta:"B"},
+    {id:3014, pergunta:"El parque nacional de Aigüestortes está en...", alternativas:{A:"Cataluña.", B:"Aragón.", C:"Castilla y León."}, correta:"A"},
+    {id:3015, pergunta:"En el norte de África están Ceuta y…", alternativas:{A:"Almería.", B:"Melilla.", C:"Cádiz."}, correta:"B"},
+    {id:3016, pergunta:"¿En qué lugar de España hay un clima que se caracteriza por inviernos fríos y veranos muy calurosos?", alternativas:{A:"Canarias.", B:"Comunidad Valenciana.", C:"Madrid."}, correta:"C"},
+    {id:3017, pergunta:"¿Cuál de estos ríos desemboca en el océano Atlántico?", alternativas:{A:"El Guadalquivir.", B:"El Manzanares.", C:"El Júcar."}, correta:"A"},
+    {id:3018, pergunta:"¿Cuál de estas provincias forma parte de la Comunidad de Castilla y León?", alternativas:{A:"Burgos.", B:"Huesca.", C:"Guadalajara."}, correta:"A"},
+    {id:3019, pergunta:"¿En qué comunidad autónoma está la ciudad de Huesca?", alternativas:{A:"Castilla-La Mancha.", B:"Aragón.", C:"Extremadura."}, correta:"B"},
+    {id:3020, pergunta:"Canarias tiene un clima…", alternativas:{A:"mediterráneo.", B:"oceánico.", C:"subtropical."}, correta:"C"},
+    {id:3021, pergunta:"El principal río que desemboca en el mar Mediterráneo es el…", alternativas:{A:"Ebro.", B:"Duero.", C:"Tajo."}, correta:"A"},
+    {id:3022, pergunta:"España está entre los países de Europa más…", alternativas:{A:"lluviosos.", B:"montañosos.", C:"fríos."}, correta:"B"},
+    {id:3023, pergunta:"¿En qué provincia está el parque nacional de Monfragüe?", alternativas:{A:"En Cáceres.", B:"En Murcia.", C:"En Ciudad Real."}, correta:"A"},
+    {id:3024, pergunta:"¿Cuál es la capital de la comunidad autónoma de Extremadura?", alternativas:{A:"Cáceres.", B:"Badajoz.", C:"Mérida."}, correta:"C"}
+],
+ 4:[
+    {id:4001, pergunta:"Los personajes principales de la novela el Quijote son don Quijote y…", alternativas:{A:"Don Juan.", B:"Sancho Panza.", C:"Doña Inés."}, correta:"B"},
+    {id:4002, pergunta:"¿Qué científica española es reconocida por sus investigaciones?", alternativas:{A:"Almudena Grandes.", B:"Montserrat Caballé.", C:"Margarita Salas."}, correta:"C"},
+    {id:4003, pergunta:"¿Quién escribió La casa de Bernarda Alba?", alternativas:{A:"Federico García Lorca.", B:"Miguel de Cervantes.", C:"Antonio Machado."}, correta:"A"},
+    {id:4004, pergunta:"¿Quién escribió Nada, una novela sobre la posguerra española?", alternativas:{A:"Carmen Laforet.", B:"Ana María Matute.", C:"María Dueñas."}, correta:"A"},
+    {id:4005, pergunta:"¿Qué músico compuso El amor brujo?", alternativas:{A:"Manuel de Falla.", B:"Isaac Albéniz.", C:"Joaquín Rodrigo."}, correta:"A"},
+    {id:4006, pergunta:"¿Qué es típico en la Noche de San Juan?", alternativas:{A:"Comer uvas.", B:"Encender hogueras.", C:"Regalar libros."}, correta:"B"},
+    {id:4007, pergunta:"¿Cuál es el instrumento más característico de la música flamenca?", alternativas:{A:"La gaita.", B:"La guitarra.", C:"El piano."}, correta:"B"},
+    {id:4008, pergunta:"Isabel Coixet es una…", alternativas:{A:"cantante pop.", B:"bailarina clásica.", C:"directora de cine."}, correta:"C"},
+    {id:4009, pergunta:"Una de las cantantes españolas más famosas actualmente es...", alternativas:{A:"Rosalía.", B:"Marisol.", C:"Lola Flores."}, correta:"A"},
+    {id:4010, pergunta:"¿En qué ciudad de España hay una mezquita que es Patrimonio de la Humanidad?", alternativas:{A:"Santiago de Compostela.", B:"Madrid.", C:"Córdoba."}, correta:"C"},
+    {id:4011, pergunta:"¿En qué ciudad de España se encuentra La Alhambra, que es Patrimonio de la Humanidad?", alternativas:{A:"En Sevilla.", B:"En Córdoba.", C:"En Granada."}, correta:"C"},
+    {id:4012, pergunta:"¿Cuál de los siguientes nombres corresponde a una directora española que ha destacado por su mirada crítica y por modernizar el cine nacional?", alternativas:{A:"Pilar Miró.", B:"Sara Baras.", C:"Penélope Cruz."}, correta:"A"},
+    {id:4013, pergunta:"¿Qué novela de éxito ha escrito Irene Vallejo?", alternativas:{A:"El infinito en un junco.", B:"El tiempo entre costuras.", C:"El camino."}, correta:"A"},
+    {id:4014, pergunta:"¿Cómo se llama la mayor institución pública dedicada a la investigación en España?", alternativas:{A:"Real Academia Española (RAE).", B:"Consejo Superior de investigaciones Científicas (CSIC).", C:"La sociedad General de Autores (SGAE)."}, correta:"B"},
+    {id:4015, pergunta:"Paco de Lucía fue un famoso….", alternativas:{A:"científico.", B:"guitarrista.", C:"pintor."}, correta:"B"},
+    {id:4016, pergunta:"¿Qué celebramos el 24 de diciembre?", alternativas:{A:"Carnaval.", B:"Nochebuena.", C:"San Juan."}, correta:"B"},
+    {id:4017, pergunta:"Juan Mari Arzak es un famoso....", alternativas:{A:"escritor.", B:"músico.", C:"cocinero."}, correta:"C"},
+    {id:4018, pergunta:"¿Quién fue Clara Campoamor?", alternativas:{A:"Una defensora de los derechos de la mujer.", B:"Una cantante lírica.", C:"Una directora de cine."}, correta:"A"},
+    {id:4019, pergunta:"¿Qué canciones típicas se cantan en Navidad?", alternativas:{A:"Flamenco.", B:"Villancicos.", C:"Jotas."}, correta:"B"},
+    {id:4020, pergunta:"La Liga y la Copa del Rey son competiciones de…", alternativas:{A:"natación.", B:"atletismo.", C:"fútbol."}, correta:"C"},
+    {id:4021, pergunta:"¿Quién ha recibido el premio Nobel de Literatura?", alternativas:{A:"María Zambrano.", B:"Pablo Picasso.", C:"Vicente Aleixandre."}, correta:"C"},
+    {id:4022, pergunta:"¿Qué fiesta se celebra en Pamplona el 7 de julio?", alternativas:{A:"Los sanfermines.", B:"Las Fallas.", C:"La Feria de Abril."}, correta:"A"},
+    {id:4023, pergunta:"Teresa Perales y Daniel Molina son...", alternativas:{A:"campeones paraolímpicos.", B:"músicos famosos.", C:"artistas de cine."}, correta:"A"},
+    {id:4024, pergunta:"¿Qué toman los españoles la noche del 31 de diciembre para celebrar el cambio de año?", alternativas:{A:"Lentejas.", B:"Uvas.", C:"Aceitunas."}, correta:"B"},
+    {id:4025, pergunta:"¿Qué mujer es autora del cuadro La verbena?", alternativas:{A:"Maruja Mallo.", B:"Carmen Maura.", C:"Clara Lago."}, correta:"A"},
+    {id:4026, pergunta:"¿En qué museo español puedes ver el cuadro Guernica de Picasso?", alternativas:{A:"Museo del Prado.", B:"Museo Reina Sofía.", C:"Museo Thyssen-Bornemisza."}, correta:"B"},
+    {id:4027, pergunta:"¿Qué escritora española escribe en otra lengua oficial de España?", alternativas:{A:"Mercè Rodoreda.", B:"Almudena Grandes.", C:"Ana María Matute."}, correta:"A"},
+    {id:4028, pergunta:"¿Qué tres culturas convivieron en la España medieval?", alternativas:{A:"La cristiana, la judía y la musulmana.", B:"La fenicia, la judía y la musulmana.", C:"La griega, la cristiana y la judía."}, correta:"A"},
+    {id:4029, pergunta:"El 6 de diciembre se celebra en España…", alternativas:{A:"el Día de la Constitución.", B:"la llegada de Colón a América.", C:"el Día del Libro."}, correta:"A"},
+    {id:4030, pergunta:"¿Qué ciudad fue un centro científico en Al-Ándalus, donde se estudiaba medicina y astronomía?", alternativas:{A:"Barcelona.", B:"Madrid.", C:"Córdoba."}, correta:"C"},
+    {id:4031, pergunta:"¿En qué ciudad española está el Museo Guggenheim?", alternativas:{A:"Bilbao.", B:"Madrid.", C:"Valencia."}, correta:"A"},
+    {id:4032, pergunta:"El Premio Cervantes se da a…", alternativas:{A:"actores.", B:"escritores.", C:"pintores."}, correta:"B"},
+    {id:4033, pergunta:"¿Qué premio reconoce a los mejores actores y películas?", alternativas:{A:"Premio Goya.", B:"Premio Nobel.", C:"Premio Cervantes."}, correta:"A"},
+    {id:4034, pergunta:"¿Qué premios promueven en España valores científicos, culturales y humanísticos?", alternativas:{A:"Los Premios Cervantes.", B:"Los Premios Princesa de Asturias.", C:"Los Premios Goya."}, correta:"B"},
+    {id:4035, pergunta:"¿Cuál de estos deportes es muy popular en España?", alternativas:{A:"El fútbol.", B:"El esquí.", C:"El golf."}, correta:"A"},
+    {id:4036, pergunta:"¿Cuál de estos deportistas juega al tenis?", alternativas:{A:"Pau Gasol.", B:"Carlos Sainz.", C:"Carlos Alcaraz."}, correta:"C"}
+],
+  5:[
+    {id:5001, pergunta:"¿Qué documento deben solicitar los extranjeros para residir legalmente en España?", alternativas:{A:"El Documento Nacional de Identidad (DNI).", B:"La Tarjeta de Identidad de Extranjero (TIE).", C:"El certificado de empadronamiento."}, correta:"B"},
+    {id:5002, pergunta:"¿Cuál es el documento que certifica el lugar de residencia del titular?", alternativas:{A:"El certificado de empadronamiento.", B:"La partida de nacimiento.", C:"El carné de conducir."}, correta:"A"},
+    {id:5003, pergunta:"¿A qué sustituye el registro electrónico individual?", alternativas:{A:"Al DNI.", B:"Al permiso de conducir.", C:"Al libro de familia."}, correta:"C"},
+    {id:5004, pergunta:"¿Cuál es la edad mínima para conducir un coche en España?", alternativas:{A:"16 años.", B:"18 años.", C:"20 años."}, correta:"B"},
+    {id:5005, pergunta:"El carné de conducir se hace en…", alternativas:{A:"la Dirección General de Tráfico (DGT).", B:"la Policía Nacional.", C:"el Registro Civil."}, correta:"A"},
+    {id:5006, pergunta:"Para sacar el carné de conducir hay que aprobar…", alternativas:{A:"un examen teórico.", B:"un examen práctico.", C:"un examen teórico y otro práctico."}, correta:"C"},
+    {id:5007, pergunta:"¿Dónde se tramita el libro de familia?", alternativas:{A:"En el Registro Civil.", B:"En la Seguridad Social.", C:"En las comisarías de policía."}, correta:"A"},
+    {id:5008, pergunta:"¿Cuál de estos canales de televisión es autonómico?", alternativas:{A:"Telecinco.", B:"Nova.", C:"Canal Sur."}, correta:"C"},
+    {id:5009, pergunta:"¿Cuánto dura el permiso de maternidad o paternidad?", alternativas:{A:"12 semanas.", B:"19 semanas.", C:"22 semanas."}, correta:"B"},
+    {id:5010, pergunta:"¿Cuál es la tasa máxima de alcohol en sangre permitida a los conductores, en gramos por litro (g/l)?", alternativas:{A:"0,5.", B:"0,7.", C:"0,9."}, correta:"A"},
+    {id:5011, pergunta:"¿Cuál es el tipo de residencia más habitual en España?", alternativas:{A:"Casa rural.", B:"Piso en un edificio de viviendas.", C:"Chalé independiente."}, correta:"B"},
+    {id:5012, pergunta:"¿Qué comunidad autónoma es conocida por la calidad de su aceite de oliva?", alternativas:{A:"Cantabria.", B:"Andalucía.", C:"La Rioja."}, correta:"B"},
+    {id:5013, pergunta:"¿Cómo se llama la revisión que deben pasar obligatoriamente los coches?", alternativas:{A:"IBI (Impuesto sobre Bienes Inmuebles).", B:"ITV (Inspección Técnica de Vehículos).", C:"ITE (Inspección Técnica de Edificios)."}, correta:"B"},
+    {id:5014, pergunta:"El aperitivo que acompaña a la bebida en bares y restaurantes se llama...", alternativas:{A:"bocadillo.", B:"tapa.", C:"primer plato."}, correta:"B"},
+    {id:5015, pergunta:"¿Dónde se tramita la tarjeta sanitaria?", alternativas:{A:"En la comisaría de policía.", B:"En el centro de salud.", C:"En el Ministerio de Sanidad."}, correta:"B"},
+    {id:5016, pergunta:"¿Con cuántos hijos una familia es numerosa?", alternativas:{A:"Con 1 hijo.", B:"Con 2 hijos.", C:"Con 3 hijos."}, correta:"C"},
+    {id:5017, pergunta:"En España está permitido el matrimonio…", alternativas:{A:"solo entre personas del mismo sexo.", B:"entre personas del mismo y diferente sexo.", C:"solo entre personas de diferente sexo."}, correta:"B"},
+    {id:5018, pergunta:"Los propietarios de perros deben registrarlos en…", alternativas:{A:"el Ministerio de Justicia.", B:"la comisaría de policía.", C:"el Ayuntamiento."}, correta:"C"},
+    {id:5019, pergunta:"Los principales ingredientes de la tortilla española son huevos y…", alternativas:{A:"pimientos.", B:"patatas.", C:"tomates."}, correta:"B"},
+    {id:5020, pergunta:"¿Cuál es uno de los platos más conocidos internacionalmente de la gastronomía española?", alternativas:{A:"Gazpacho.", B:"Pizza.", C:"Pasta."}, correta:"A"},
+    {id:5021, pergunta:"¿Cuál de estos canales de televisión es público?", alternativas:{A:"Tele 5.", B:"La 1.", C:"Antena 3."}, correta:"B"},
+    {id:5022, pergunta:"En una comunidad de vecinos, una de las normas es…", alternativas:{A:"abrir la puerta al cartero.", B:"no molestar con ruido.", C:"limpiar los espacios comunes."}, correta:"B"},
+    {id:5023, pergunta:"¿Cuál de estos es el principal ingrediente de la paella valenciana?", alternativas:{A:"Arroz.", B:"Chorizo.", C:"Garbanzos."}, correta:"A"},
+    {id:5024, pergunta:"La sidra es una bebida típica de…", alternativas:{A:"Asturias.", B:"Valencia.", C:"Canarias."}, correta:"A"},
+    {id:5025, pergunta:"Los españoles tienen dos apellidos, el primero es…", alternativas:{A:"obligatoriamente el de la madre.", B:"obligatoriamente el del padre.", C:"puede ser el de la madre o el del padre."}, correta:"C"},
+    {id:5026, pergunta:"La Fiesta Nacional de España es el…", alternativas:{A:"6 de diciembre.", B:"15 de agosto.", C:"12 de octubre."}, correta:"C"},
+    {id:5027, pergunta:"¿Qué días suelen cerrar la mayoría de las tiendas o el pequeño comercio?", alternativas:{A:"Los lunes.", B:"Los domingos.", C:"Los sábados por la tarde."}, correta:"B"},
+    {id:5028, pergunta:"¿Dónde se hace el pasaporte?", alternativas:{A:"En el registro civil.", B:"En una comisaría de policía.", C:"En el Ayuntamiento."}, correta:"B"},
+    {id:5029, pergunta:"El Ministerio de Igualdad es el encargado de luchar contra la violencia de género y la…", alternativas:{A:"separación.", B:"discriminación.", C:"solidaridad."}, correta:"B"},
+    {id:5030, pergunta:"¿Qué comunidad autónoma es conocida por la calidad de sus cavas?", alternativas:{A:"Galicia.", B:"Cataluña.", C:"Castilla-La Mancha."}, correta:"B"},
+    {id:5031, pergunta:"¿Qué documento se necesita para recibir atención médica en la sanidad pública?", alternativas:{A:"El pasaporte.", B:"La tarjeta sanitaria.", C:"El certificado de nacimiento."}, correta:"B"},
+    {id:5032, pergunta:"El horario de Canarias, con respecto a la Península, es de…", alternativas:{A:"dos horas menos.", B:"una hora menos.", C:"una hora más."}, correta:"B"},
+    {id:5033, pergunta:"Para acceder a la Universidad se debe superar una prueba de evaluación llamada…", alternativas:{A:"Selectividad.", B:"Examen preuniversitario.", C:"Prueba de Acceso a la Universidad."}, correta:"C"},
+    {id:5034, pergunta:"¿Cuál de estos productos necesita importar España de otros países?", alternativas:{A:"Petróleo.", B:"Aceite de oliva.", C:"Medicamentos."}, correta:"A"},
+    {id:5035, pergunta:"¿Qué tipo de impuestos tienen que pagar los ciudadanos en España?", alternativas:{A:"Impuestos directos como el IRPF.", B:"Impuestos indirectos como el IVA.", C:"Impuestos directos e indirectos."}, correta:"C"},
+    {id:5036, pergunta:"Los adultos sin Bachillerato pueden estudiar en la Universidad haciendo una prueba especial a partir de los…", alternativas:{A:"18 años.", B:"23 años.", C:"25 años."}, correta:"C"},
+    {id:5037, pergunta:"¿Dónde puede encontrarse la siguiente norma «No pisar el césped, ni arrancar flores»?", alternativas:{A:"En zonas de recreo.", B:"En los teatros.", C:"En los estadios de fútbol."}, correta:"A"},
+    {id:5038, pergunta:"El Bachillerato en España…", alternativas:{A:"es obligatorio.", B:"se compone de dos cursos académicos.", C:"es la enseñanza a alumnos de 14 a 16 años."}, correta:"B"},
+    {id:5039, pergunta:"El Impuesto sobre el Valor Añadido (IVA) forma parte de los…", alternativas:{A:"Impuestos indirectos.", B:"Impuestos sobre la renta.", C:"Impuestos sobre sociedades."}, correta:"A"},
+    {id:5040, pergunta:"¿Qué número reciben los trabajadores al comenzar su primer empleo?", alternativas:{A:"El de la Seguridad Social.", B:"El del pasaporte.", C:"El número de servicio."}, correta:"A"},
+    {id:5041, pergunta:"Los colegios públicos…", alternativas:{A:"pueden decidir su número de plazas.", B:"pueden contratar a los profesores que quieran.", C:"son gratuitos."}, correta:"C"},
+    {id:5042, pergunta:"¿Cuál de estos puertos es uno de los principales de España?", alternativas:{A:"Tenerife.", B:"Alicante.", C:"Algeciras."}, correta:"C"},
+    {id:5043, pergunta:"Un colegio concertado es un colegio privado que…", alternativas:{A:"recebe dinero de la Administración.", B:"financian los padres de los alumnos.", C:"recebe dinero de los bancos."}, correta:"A"},
+    {id:5044, pergunta:"España exporta productos principalmente a países…", alternativas:{A:"de Hispanoamérica.", B:"de la Unión Europea.", C:"del norte de África."}, correta:"B"},
+    {id:5045, pergunta:"Las bibliotecas públicas son gratuitas para…", alternativas:{A:"todos.", B:"los parados.", C:"los niños."}, correta:"A"},
+    {id:5046, pergunta:"¿Cuál de estos productos exporta España más que importa?", alternativas:{A:"Gas.", B:"Ropa.", C:"Calzado."}, correta:"C"},
+    {id:5047, pergunta:"Una persona mayor de 18 años puede obtener el título de Graduado en Educación Secundaria Obligatoria en…", alternativas:{A:"un Centro de Educación de Personas Adultas.", B:"un centro de enseñanza primaria.", C:"una universidad."}, correta:"A"},
+    {id:5048, pergunta:"La formación profesional…", alternativas:{A:"es para mayores de 25 años.", B:"puede ser de grado medio o superior.", C:"es obligatoria."}, correta:"B"},
+    {id:5049, pergunta:"¿Adónde vamos para ver al médico de familia o al pediatra?", alternativas:{A:"Al hospital.", B:"Al centro de salud.", C:"A la farmacia."}, correta:"B"},
+    {id:5050, pergunta:"¿Para cuántos años vale la tarjeta sanitaria europea?", alternativas:{A:"Para un año.", B:"Para dos años.", C:"Para 10 años."}, correta:"B"},
+    {id:5051, pergunta:"¿A qué hora se cena normalmente en España?", alternativas:{A:"A las 18 h.", B:"A las 23 h.", C:"A las 21 o 22 h."}, correta:"C"},
+    {id:5052, pergunta:"¿Cuál es el número de teléfono único para cualquier emergencia?", alternativas:{A:"060.", B:"112.", C:"911."}, correta:"B"},
+    {id:5053, pergunta:"¿Cuál de estos periódicos se publica a nivel nacional?", alternativas:{A:"El Diario Vasco.", B:"El País.", C:"La Voz de Galicia."}, correta:"B"},
+    {id:5054, pergunta:"¿Dónde se venden sellos y tabaco?", alternativas:{A:"En el quiosco.", B:"En la farmacia.", C:"En el estanco."}, correta:"C"},
+    {id:5055, pergunta:"¿Cuándo se puede llamar al número de teléfono para atención a víctimas de violencia de género?", alternativas:{A:"Las 24 horas del día.", B:"En horario de mañana.", C:"De lunes a viernes."}, correta:"A"},
+    {id:5056, pergunta:"La organización que trabaja para conseguir la integración de las personas con discapacidad visual es…", alternativas:{A:"la ONCE.", B:"Unicef.", C:"Cáritas."}, correta:"A"},
+    {id:5057, pergunta:"El Camino de Santiago es…", alternativas:{A:"Patrimonio de la Humanidad.", B:"una vía de ferrocarril.", C:"una ruta para excursionistas."}, correta:"A"},
+    {id:5058, pergunta:"¿Cuál es el canal de televisión estatal que transmite noticias de actualidad nacional e internacional continuamente?", alternativas:{A:"Teledeporte.", B:"La 1.", C:"Canal 24 horas."}, correta:"C"},
+    {id:5059, pergunta:"El teléfono gratuito para las víctimas de violencia de género es el…", alternativas:{A:"091.", B:"112.", C:"016."}, correta:"C"},
+    {id:5060, pergunta:"En España, la red de trenes puede ser de larga distancia, de media distancia y…", alternativas:{A:"de cercanías.", B:"rural.", C:"transnacional."}, correta:"A"},
+    {id:5061, pergunta:"¿Qué está prohibido en la puerta de un colegio?", alternativas:{A:"Fumar un cigarrillo.", B:"Conducir un coche.", C:"Vender refrescos."}, correta:"A"},
+    {id:5062, pergunta:"¿Qué título se obtiene al finalizar un ciclo de grado medio de Formación Profesional?", alternativas:{A:"Bachiller.", B:"Técnico.", C:"Graduado en ESO."}, correta:"B"},
+    {id:5063, pergunta:"¿Qué título se obtiene tras realizar una tesis doctoral en España?", alternativas:{A:"Máster.", B:"Graduado.", C:"Doctor."}, correta:"C"},
+    {id:5064, pergunta:"¿Dónde se compran las medicinas con receta?", alternativas:{A:"En el hospital.", B:"En el centro de salud.", C:"En la farmacia."}, correta:"C"},
+    {id:5065, pergunta:"¿Cuál de estas tres recomendaciones podemos encontrar en un parque?", alternativas:{A:"No pisar el césped.", B:"Se recomienda pagar el billete con el dinero justo.", C:"Respetar las normas sobre equipaje."}, correta:"A"},
+    {id:5066, pergunta:"¿Cuál de las siguientes cosas es obligatoria para el propietario de un coche en España?", alternativas:{A:"El garaje.", B:"El seguro.", C:"La alarma."}, correta:"B"},
+    {id:5067, pergunta:"El aeropuerto Adolfo Suárez está en…", alternativas:{A:"Barcelona.", B:"Madrid.", C:"Bilbao."}, correta:"B"},
+    {id:5068, pergunta:"En un coche es obligatorio el uso del cinturón de seguridad...", alternativas:{A:"solo en el asiento del conductor.", B:"en los asientos delanteros.", C:"en todos los asientos."}, correta:"C"},
+    {id:5069, pergunta:"¿Cuál es el límite de velocidad en autopista?", alternativas:{A:"90 km/h.", B:"120 km/h.", C:"150 km/h."}, correta:"B"},
+    {id:5070, pergunta:"Ceder el asiento a las personas con movilidad reducida es una norma que encontramos indicada en…", alternativas:{A:"el transporte público.", B:"las bibliotecas.", C:"los museos."}, correta:"A"},
+    {id:5071, pergunta:"¿Cuál es el medio de transporte público que tiene una luz verde encendida si está libre?", alternativas:{A:"El autobús.", B:"El taxi.", C:"El tranvía."}, correta:"B"},
+    {id:5072, pergunta:"¿Qué debes hacer si tienes un perro?", alternativas:{A:"Pasearlo sin correa.", B:"Ponerle un microchip y vacunarlo.", C:"No recoger sus excrementos."}, correta:"B"},
+    {id:5073, pergunta:"Los españoles necesitan el pasaporte para viajar a…", alternativas:{A:"Italia.", B:"China.", C:"Alemania."}, correta:"B"},
+    {id:5074, pergunta:"¿Cuál es la edad mínima para trabajar en España?", alternativas:{A:"16 años.", B:"18 años.", C:"21 años."}, correta:"A"},
+    {id:5075, pergunta:"¿Cuál es el sector de mayor peso en la economía española?", alternativas:{A:"Agricultura.", B:"Servicios.", C:"Construcción."}, correta:"B"},
+    {id:5076, pergunta:"España es innovadora en el sector de…", alternativas:{A:"la ingeniería aeroespacial.", B:"las energías renovables.", C:"la energía nuclear."}, correta:"B"},
+    {id:5077, pergunta:"¿Cómo se llama la ley laboral más importante de España?", alternativas:{A:"La Constitución.", B:"El Estatuto de los Trabajadores.", C:"El Servicio Público de Empleo Estatal."}, correta:"B"},
+    {id:5078, pergunta:"¿Cuál de estos establecimientos está abierto 24 horas si es necesario?", alternativas:{A:"Farmacia.", B:"Pescadería.", C:"Librería."}, correta:"A"},
+    {id:5079, pergunta:"La educación infantil en España…", alternativas:{A:"es obligatoria.", B:"tiene dos ciclos.", C:"empieza a los 4 años."}, correta:"B"},
+    {id:5080, pergunta:"¿Cuándo empieza el calendario escolar?", alternativas:{A:"En agosto.", B:"En septiembre.", C:"En octubre."}, correta:"B"},
+    {id:5081, pergunta:"Las Escuelas Oficiales de Idiomas…", alternativas:{A:"son centros de enseñanza privada.", B:"son para mayores de 16 años.", C:"dependen del Instituto Cervantes."}, correta:"B"},
+    {id:5082, pergunta:"¿Cuál es el documento que recoge los años de cotización a la Seguridad Social?", alternativas:{A:"Informe de vida laboral.", B:"Recibo de finiquito.", C:"Certificado de profesionalidad."}, correta:"A"},
+    {id:5083, pergunta:"Los convenios colectivos de una empresa son los que se firman con los representantes de los trabajadores sobre…", alternativas:{A:"las condiciones laborales.", B:"el futuro de la empresa.", C:"la relación con los clientes."}, correta:"A"},
+    {id:5084, pergunta:"¿En cuál de estos sectores destaca España?", alternativas:{A:"En el turismo.", B:"En la industria automovilística.", C:"En tecnología digital."}, correta:"A"}
+  ]
+};
+
+/* =====================================================
+   ⚙️ LÓGICA DO QUIZ (SEM REPETIR PERGUNTAS)
+   ===================================================== */
+
+let tareaActual=[];
+let preguntaActual=null;
+let aciertos=0;
+let errores=0;
+let respondido=false;
+let perguntasUsadas = []; // IDs já usados
+
+window.onload=()=>{
+document.querySelectorAll("#menuScreen button").forEach((b,i)=>{
+setTimeout(()=>b.classList.add("animate-in"),i*80);
+});
+};
+
+document.querySelectorAll(".tarea").forEach((btn,i)=>{
+btn.onclick=()=>iniciar(i+1,btn.innerText);
+});
+document.querySelector(".center-button").onclick=()=>iniciar("all","Modo Aleatorio");
+
+function iniciar(tipo,nombre){
+const menu=document.getElementById("menuScreen");
+const quiz=document.getElementById("quizScreen");
+
+menu.style.opacity=0;
+setTimeout(()=>{
+menu.style.display="none";
+quiz.style.display="flex";
+setTimeout(()=>quiz.classList.add("show"),50);
+},400);
+
+if(tipo==="all"){
+tareaActual=[...tareas[1],...tareas[2],...tareas[3],...tareas[4],...tareas[5]];
+}else{
+tareaActual=tareas[tipo];
+}
+
+perguntasUsadas = []; // reset ao iniciar nova tarefa
+document.getElementById("modoAtual").innerText=nombre;
+siguiente();
+}
+
+// Função que pega pergunta sem repetir
+function pegarPerguntaAleatoria(listaPerguntas){
+  if(perguntasUsadas.length === listaPerguntas.length){
+    perguntasUsadas = []; // reset quando todas usadas
+  }
+  let pergunta;
+  do {
+    const indice = Math.floor(Math.random()*listaPerguntas.length);
+    pergunta = listaPerguntas[indice];
+  } while(perguntasUsadas.includes(pergunta.id));
+  perguntasUsadas.push(pergunta.id);
+  return pergunta;
+}
+
+function siguiente(){
+respondido=false;
+preguntaActual = pegarPerguntaAleatoria(tareaActual);
+mostrar();
+}
+
+function mostrar(){
+const quiz=document.getElementById("quiz");
+quiz.innerHTML=`
+<h3 class="animate-in">${preguntaActual.id} - ${preguntaActual.pergunta}</h3>
+<button class="button respuesta" data="A">A) ${preguntaActual.alternativas.A}</button>
+<button class="button respuesta" data="B">B) ${preguntaActual.alternativas.B}</button>
+<button class="button respuesta" data="C">C) ${preguntaActual.alternativas.C}</button>
+`;
+
+document.querySelectorAll(".respuesta").forEach((b,i)=>{
+setTimeout(()=>b.classList.add("animate-in"),i*100);
+b.onclick=()=>responder(b);
+});
+}
+
+function responder(btn){
+if(respondido)return;
+respondido=true;
+
+const letra=btn.getAttribute("data");
+document.querySelectorAll(".respuesta").forEach(b=>b.classList.add("disabled"));
+
+if(letra===preguntaActual.correta){
+btn.classList.add("correct");
+aciertos++;
+}else{
+btn.classList.add("wrong");
+errores++;
+document.querySelectorAll(".respuesta").forEach(b=>{
+if(b.getAttribute("data")===preguntaActual.correta){
+b.classList.add("correct");
+}
+});
+}
+
+document.getElementById("acertos").innerText=aciertos;
+document.getElementById("erros").innerText=errores;
+}
+
+document.querySelector(".proxima").onclick=siguiente;
+
+document.querySelector(".voltar").onclick=()=>{
+const menu=document.getElementById("menuScreen");
+const quiz=document.getElementById("quizScreen");
+
+quiz.classList.remove("show");
+setTimeout(()=>{
+quiz.style.display="none";
+menu.style.display="block";
+setTimeout(()=>menu.style.opacity=1,50);
+},400);
+};
+</script>
+
+</body>
+</html>
